@@ -8,19 +8,19 @@
 #include "Program.h"
 #include <cmath>
 
+using std::shared_ptr;
+
 class SinProgram : public metamorphicTestFramework::Program<double, double> {
 public:
     double genResult(double &testCase) override{
         return sin(testCase);
     };
 
-    ~SinProgram() noexcept override = default;
-
-    AutoPoint<Program> clone() const & override{
-        return AutoPoint<Program>(new SinProgram(*this));
+    shared_ptr<Program> clone() const & override{
+        return shared_ptr<Program>(new SinProgram(*this));
     };
-    AutoPoint<Program> clone() && override{
-        return AutoPoint<Program>(new SinProgram(*this));
+    shared_ptr<Program> clone() && override{
+        return shared_ptr<Program>(new SinProgram(*this));
     };
 };
 

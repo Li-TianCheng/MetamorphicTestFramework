@@ -5,7 +5,6 @@
 #ifndef METAMORPHICTESTFRAMEWORK_GENSOURCECASE_H
 #define METAMORPHICTESTFRAMEWORK_GENSOURCECASE_H
 
-#include "AutoPoint.h"
 
 namespace metamorphicTestFramework{
     template <typename T>
@@ -13,8 +12,8 @@ namespace metamorphicTestFramework{
     public:
         virtual T genSourceCase() = 0;
         virtual ~GenSourceCase() = default;
-        virtual AutoPoint<GenSourceCase<T>> clone() const & = 0;
-        virtual AutoPoint<GenSourceCase<T>> clone() && = 0;
+        virtual std::shared_ptr<GenSourceCase<T>> clone() const & = 0;
+        virtual std::shared_ptr<GenSourceCase<T>> clone() && = 0;
     };
 }
 

@@ -2,8 +2,8 @@
 // Created by ltc on 2021/3/7.
 //
 
-#ifndef LIBPTHREAD_MUTEX_H
-#define LIBPTHREAD_MUTEX_H
+#ifndef MYPTHREAD_MUTEX_H
+#define MYPTHREAD_MUTEX_H
 
 #include <pthread.h>
 
@@ -15,11 +15,13 @@ public:
     bool tryLock();
     ~Mutex();
     Mutex(const Mutex&) = delete;
+    Mutex(Mutex&&) = delete;
     void operator=(const Mutex&) = delete;
+    void operator=(Mutex&&) = delete;
 private:
     friend class Condition;
     pthread_mutex_t mutex;
 };
 
 
-#endif //LIBPTHREAD_MUTEX_H
+#endif //MYPTHREAD_MUTEX_H

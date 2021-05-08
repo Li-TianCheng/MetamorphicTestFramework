@@ -2,8 +2,8 @@
 // Created by ltc on 2021/3/9.
 //
 
-#ifndef LIBPTHREAD_SPINLOCK_H
-#define LIBPTHREAD_SPINLOCK_H
+#ifndef MYPTHREAD_SPINLOCK_H
+#define MYPTHREAD_SPINLOCK_H
 
 #include <pthread.h>
 
@@ -15,10 +15,12 @@ public:
     bool tryLock();
     ~SpinLock();
     SpinLock(const SpinLock&) = delete;
+    SpinLock(SpinLock&&) = delete;
     void operator=(const SpinLock&) = delete;
+    void operator=(SpinLock&&) = delete;
 private:
     pthread_spinlock_t spinLock;
 };
 
 
-#endif //LIBPTHREAD_SPINLOCK_H
+#endif //MYPTHREAD_SPINLOCK_H

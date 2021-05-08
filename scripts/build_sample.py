@@ -25,9 +25,7 @@ if __name__ == "__main__":
 
     gen = "\n\n#ifndef METAMORPHICTESTFRAMEWORK_{0}GEN_HPP\n" \
           "#define METAMORPHICTESTFRAMEWORK_{0}GEN_HPP\n\n" \
-          "#include <memory>\n" \
           "#include \"GenSourceCase.h\"\n\n" \
-          "using std::shared_ptr;\n\n" \
           "class {1}Gen : public metamorphicTestFramework::GenSourceCase<{2}> {{\n" \
           "public:\n" \
           "\t{2} genSourceCase() override {{\n" \
@@ -43,9 +41,7 @@ if __name__ == "__main__":
     for i in range(mrNum):
         mr = "\n\n#ifndef METAMORPHICTESTFRAMEWORK_{0}MR{4}_HPP\n" \
              "#define METAMORPHICTESTFRAMEWORK_{0}MR{4}_HPP\n\n" \
-             "#include <memory>\n" \
              "#include \"MR.h\"\n\n" \
-             "using std::shared_ptr;\n\n" \
              "class {1}MR{4} : public metamorphicTestFramework::MR<{2}, {3}> {{\n" \
              "public:\n" \
              "\t{2} genFollowCase({2}& sourceCase, {3}& sourceCaseResult) override {{\n" \
@@ -64,9 +60,7 @@ if __name__ == "__main__":
 
     program = "\n\n#ifndef METAMORPHICTESTFRAMEWORK_{0}PROGRAM_HPP\n" \
               "#define METAMORPHICTESTFRAMEWORK_{0}PROGRAM_HPP\n\n" \
-              "#include <memory>\n" \
               "#include \"Program.h\"\n\n" \
-              "using std::shared_ptr;\n\n" \
               "class {1}Program : public metamorphicTestFramework::Program<{2}, {3}> {{\n" \
               "public:\n" \
               "\t{3} genResult({2} &testCase) override {{\n" \

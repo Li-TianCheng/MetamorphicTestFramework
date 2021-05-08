@@ -10,9 +10,9 @@
 
 3.支持自定义分析函数
 
-4.支持多线程
+>调用MetamorphicTest.analyzeResult()，可利用自定义方法分析结果
 
-5.添加生成模板脚手架
+4.支持生成模板脚手架
 
 >执行scripts下的build_sample.py
 
@@ -22,7 +22,7 @@
 >--U 程序输出类型
 >--n mr个数
 
-6.自动构建
+5.支持自动构建
 
 >执行scripts下的build.sh,生成可执行文件到output目录下
 

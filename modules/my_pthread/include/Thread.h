@@ -2,8 +2,8 @@
 // Created by ltc on 2021/3/7.
 //
 
-#ifndef LIBPTHREAD_THREAD_H
-#define LIBPTHREAD_THREAD_H
+#ifndef MYPTHREAD_THREAD_H
+#define MYPTHREAD_THREAD_H
 
 #include <pthread.h>
 
@@ -18,7 +18,9 @@ public:
     bool getState() const;
     void* getResult() const;
     Thread(const Thread&) = delete;
+    Thread(Thread&&) = delete;
     void operator=(const Thread&) = delete;
+    void operator=(Thread&&) = delete;
 private:
     bool isRunning;
     pthread_t threadID;
@@ -26,4 +28,4 @@ private:
 };
 
 
-#endif //LIBPTHREAD_THREAD_H
+#endif //MYPTHREAD_THREAD_H

@@ -2,8 +2,8 @@
 // Created by ltc on 2021/3/9.
 //
 
-#ifndef LIBPTHREAD_SEMAPHORE_H
-#define LIBPTHREAD_SEMAPHORE_H
+#ifndef MYPTHREAD_SEMAPHORE_H
+#define MYPTHREAD_SEMAPHORE_H
 
 #include <semaphore.h>
 
@@ -14,10 +14,12 @@ public:
     void post();
     ~Semaphore();
     Semaphore(const Semaphore&) = delete;
+    Semaphore(Semaphore&&) = delete;
     void operator=(const Semaphore&) = delete;
+    void operator=(Semaphore&&) = delete;
 private:
     sem_t semaphore;
 };
 
 
-#endif //LIBPTHREAD_SEMAPHORE_H
+#endif //MYPTHREAD_SEMAPHORE_H

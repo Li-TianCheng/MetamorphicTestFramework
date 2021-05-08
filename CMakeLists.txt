@@ -7,8 +7,10 @@ include_directories(./include ./modules)
 
 file(GLOB_RECURSE SOURCE_FILES ./src/*)
 
-add_subdirectory(modules/lib_pthread)
+add_subdirectory(modules/my_pthread)
+
+add_subdirectory(modules/mem_pool)
 
 add_executable(MetamorphicTestFramework main.cpp ${SOURCE_FILES})
 
-target_link_libraries(MetamorphicTestFramework pthread LibPthread)
+target_link_libraries(MetamorphicTestFramework MyPthread MemPool)

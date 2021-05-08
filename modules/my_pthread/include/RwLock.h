@@ -2,8 +2,8 @@
 // Created by ltc on 2021/3/9.
 //
 
-#ifndef LIBPTHREAD_RWLOCK_H
-#define LIBPTHREAD_RWLOCK_H
+#ifndef MYPTHREAD_RWLOCK_H
+#define MYPTHREAD_RWLOCK_H
 
 #include <pthread.h>
 
@@ -17,10 +17,12 @@ public:
     bool tryWrLock();
     ~RwLock();
     RwLock(const RwLock&) = delete;
+    RwLock(RwLock&&) = delete;
     void operator=(const RwLock&) = delete;
+    void operator=(RwLock&&) = delete;
 private:
     pthread_rwlock_t  rwLock;
 };
 
 
-#endif //LIBPTHREAD_RWLOCK_H
+#endif //MYPTHREAD_RWLOCK_H

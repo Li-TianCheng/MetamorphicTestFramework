@@ -7,8 +7,6 @@
 
 #include "GenSourceCase.h"
 
-using std::shared_ptr;
-
 class SinGen : public metamorphicTestFramework::GenSourceCase<double>{
 public:
     double genSourceCase() override{

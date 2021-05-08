@@ -2,8 +2,8 @@
 // Created by ltc on 2021/5/8.
 //
 
-#ifndef METAMORPHICTESTFRAMEWORK_LATCH_H
-#define METAMORPHICTESTFRAMEWORK_LATCH_H
+#ifndef MYPTHREAD_LATCH_H
+#define MYPTHREAD_LATCH_H
 
 #include "Mutex.h"
 #include "Condition.h"
@@ -14,7 +14,9 @@ public:
     void done();
     void wait();
     Latch(const Latch&) = delete;
+    Latch(Latch&&) = delete;
     void operator=(const Latch&) = delete;
+    void operator=(Latch&&) = delete;
 private:
     int count;
     Mutex mutex;
@@ -22,4 +24,4 @@ private:
 };
 
 
-#endif //METAMORPHICTESTFRAMEWORK_LATCH_H
+#endif //MYPTHREAD_LATCH_H

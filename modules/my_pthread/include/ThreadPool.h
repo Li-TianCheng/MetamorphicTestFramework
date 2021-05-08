@@ -2,8 +2,8 @@
 // Created by ltc on 2021/3/7.
 //
 
-#ifndef LIBPTHREAD_THREADPOOL_H
-#define LIBPTHREAD_THREADPOOL_H
+#ifndef MYPTHREAD_THREADPOOL_H
+#define MYPTHREAD_THREADPOOL_H
 
 #include "Thread.h"
 #include "Condition.h"
@@ -22,7 +22,9 @@ public:
     void join();
     int getRunningNum() const;
     ThreadPool(const ThreadPool&) = delete;
+    ThreadPool(ThreadPool&&) = delete;
     void operator=(const ThreadPool&) = delete;
+    void operator=(ThreadPool&&) = delete;
     ~ThreadPool();
 private:
     void run();
@@ -44,4 +46,4 @@ private:
 };
 
 
-#endif //LIBPTHREAD_THREADPOOL_H
+#endif //MYPTHREAD_THREADPOOL_H

@@ -10,12 +10,12 @@
 #include "MR.h"
 #include "Program.h"
 #include "GenSourceCase.h"
-#include "lib_pthread/include/ThreadPool.h"
-#include "lib_pthread/include/Latch.h"
+#include "my_pthread/include/TaskManager.h"
+#include "my_pthread/include/Latch.h"
+#include "mem_pool/include/ObjPool.hpp"
 
 namespace metamorphicTestFramework{
     using std::vector;
-    using std::move;
     using std::shared_ptr;
     using std::tuple;
 
@@ -24,7 +24,7 @@ namespace metamorphicTestFramework{
     public:
         MetamorphicTest(size_t sourceCaseNum, size_t followCaseNum,
                         shared_ptr<GenSourceCase<T>>& generator, shared_ptr<Program<T, U>>& program,
-                        vector<shared_ptr<MR<T, U>>>& mrs, ThreadPool* threadPool);
+                        vector<shared_ptr<MR<T, U>>>& mrs);
         MetamorphicTest(const MetamorphicTest& m) = delete;
         MetamorphicTest(MetamorphicTest&& m) = delete;
         MetamorphicTest& operator=(const MetamorphicTest& m) = delete;
@@ -39,7 +39,6 @@ namespace metamorphicTestFramework{
     private:
         Latch sourceCaseLatch;
         Latch followCaseLatch;
-        ThreadPool* threadPool;
         size_t sourceCaseNum;
         size_t followCaseNum;
         shared_ptr<GenSourceCase<T>> generator;
@@ -57,27 +56,26 @@ namespace metamorphicTestFramework{
                                            size_t followCaseNum,
                                            shared_ptr<GenSourceCase<T>>& generator,
                                            shared_ptr<Program<T, U>>& program,
-                                           vector<shared_ptr<MR<T, U>>>& mrs,
-                                           ThreadPool* threadPool)
+                                           vector<shared_ptr<MR<T, U>>>& mrs)
     : sourceCaseNum(sourceCaseNum), followCaseNum(followCaseNum), generator(generator), program(program), mrs(mrs),
       sourceCases(sourceCaseNum), followCases(mrs.size(), vector<vector<T>>(sourceCaseNum, vector<T>(followCaseNum))),
       sourceCaseResults(sourceCaseNum),
       followCaseResults(mrs.size(), vector<vector<U>>(sourceCaseNum, vector<U>(followCaseNum))),
       metamorphicTestResults(mrs.size(), vector<vector<bool>>(sourceCaseNum, vector<bool>(followCaseNum))),
-      threadPool(threadPool), sourceCaseLatch(sourceCaseNum), followCaseLatch(mrs.size()*sourceCaseNum*followCaseNum){}
+      sourceCaseLatch(sourceCaseNum), followCaseLatch(mrs.size()*sourceCaseNum*followCaseNum){}
 
     template <typename T, typename U> inline
     void MetamorphicTest<T, U>::metamorphicTest() {
         for (int i = 0; i < sourceCaseNum; i++){
-            auto* arg = new tuple<MetamorphicTest*, int>(this, i);
-            threadPool->addTask(&this->sourceCaseTask, arg);
+            auto* arg = ObjPool::allocate<tuple<MetamorphicTest*, int>>(this, i);
+            TaskManager::addTask(&this->sourceCaseTask, arg);
         }
         sourceCaseLatch.wait();
         for (int i = 0; i < mrs.size(); i++){
             for (int j = 0; j < sourceCaseNum; j++){
                 for (int k = 0; k < followCaseNum; k++){
-                    auto* arg = new tuple<MetamorphicTest*, int, int, int>(this, i, j, k);
-                    threadPool->addTask(&this->followCaseTask, arg);
+                    auto* arg = ObjPool::allocate<tuple<MetamorphicTest*, int, int, int>>(this, i, j, k);
+                    TaskManager::addTask(&this->followCaseTask, arg);
                 }
             }
         }
@@ -94,18 +92,18 @@ namespace metamorphicTestFramework{
         return metamorphicTestResults;
     }
 
-    template<typename T, typename U>
+    template<typename T, typename U> inline
     void MetamorphicTest<T, U>::sourceCaseTask(void *arg) {
         tuple<MetamorphicTest<T, U>*, int> args = *(tuple<MetamorphicTest<T, U>*, int>*)arg;
         MetamorphicTest* m = std::get<0>(args);
         int i = std::get<1>(args);
         m->sourceCases[i] = m->generator->genSourceCase();
         m->sourceCaseResults[i] = m->program->genResult(m->sourceCases[i]);
-        delete (tuple<MetamorphicTest<T, U>*, int>*)arg;
+        ObjPool::deallocate((tuple<MetamorphicTest<T, U>*, int>*)arg);
         m->sourceCaseLatch.done();
     }
 
-    template<typename T, typename U>
+    template<typename T, typename U> inline
     void MetamorphicTest<T, U>::followCaseTask(void *arg) {
         tuple<MetamorphicTest<T, U>*, int, int, int> args = *(tuple<MetamorphicTest<T, U>*, int, int, int>*)arg;
         MetamorphicTest* m = std::get<0>(args);
@@ -118,7 +116,7 @@ namespace metamorphicTestFramework{
                                                              m->followCaseResults[i][j][k],
                                                              m->sourceCases[j],
                                                              m->followCases[i][j][k]);
-        delete (tuple<MetamorphicTest<T, U>*, int>*)arg;
+        ObjPool::deallocate((tuple<MetamorphicTest<T, U>*, int, int, int>*)arg);
         m->followCaseLatch.done();
     }
 }

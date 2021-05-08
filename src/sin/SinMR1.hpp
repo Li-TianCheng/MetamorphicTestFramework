@@ -9,8 +9,6 @@
 
 #define PI 3.141592653589793
 
-using std::shared_ptr;
-
 class SinMR1 : public metamorphicTestFramework::MR<double, double>{
 public:
     double genFollowCase(double& sourceCase, double& sourceCaseResult) override{

@@ -11,7 +11,7 @@ if [ -d "../tmp/" ];then
 fi
 mkdir ../tmp
 cd ../tmp
-cmake ../
+cmake -DCMAKE_BUILD_TYPE=Release ..
 make
 mv ./MetamorphicTestFramework ../output
 cd ..

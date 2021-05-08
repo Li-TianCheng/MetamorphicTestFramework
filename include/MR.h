@@ -13,8 +13,6 @@ namespace metamorphicTestFramework{
         virtual T genFollowCase(T& sourceCase, U& sourceCaseResult) = 0;
         virtual bool mrRelation(U& sourceCaseResult, U& followCaseResult, T& sourceCase, T& followCase) = 0;
         virtual ~MR() = default;
-        virtual std::shared_ptr<MR<T, U>> clone() const & = 0;
-        virtual std::shared_ptr<MR<T, U>> clone() && = 0;
     };
 }
 

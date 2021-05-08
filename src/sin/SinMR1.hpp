@@ -6,7 +6,6 @@
 #define METAMORPHICTESTFRAMEWORK_SINMR1_HPP
 
 #include "MR.h"
-#include <cstdlib>
 
 #define PI 3.141592653589793
 
@@ -23,14 +22,6 @@ public:
     };
 
     ~SinMR1() noexcept override = default;
-
-    shared_ptr<MR> clone() const & override{
-        return shared_ptr<MR>(new SinMR1(*this));
-    }
-
-    shared_ptr<MR> clone() && override{
-        return shared_ptr<MR>(new SinMR1(*this));
-    }
 };
 
 

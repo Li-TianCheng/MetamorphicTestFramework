@@ -3,7 +3,7 @@
 //
 
 #include <stdexcept>
-#include "../include/Thread.h"
+#include "Thread.h"
 
 void Thread::run(void *(*handle)(void *), void* arg) {
     if (pthread_create(&threadID, nullptr, handle, arg) != 0){

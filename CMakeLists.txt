@@ -5,7 +5,7 @@ set(CMAKE_CXX_STANDARD 14)
 
 include_directories(./include ./modules)
 
-aux_source_directory(./src SOURCE_FILES)
+file(GLOB_RECURSE SOURCE_FILES ./src/*)
 
 add_subdirectory(modules/lib_pthread)
 

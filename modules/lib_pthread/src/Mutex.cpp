@@ -2,7 +2,7 @@
 // Created by ltc on 2021/3/7.
 //
 
-#include "../include/Mutex.h"
+#include "Mutex.h"
 #include <stdexcept>
 
 Mutex::Mutex():mutex() {

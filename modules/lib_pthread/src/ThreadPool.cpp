@@ -2,7 +2,7 @@
 // Created by ltc on 2021/3/7.
 //
 
-#include "../include/ThreadPool.h"
+#include "ThreadPool.h"
 #include <iostream>
 
 ThreadPool::ThreadPool(int threadNum, int queueSize):mutex(), condition(), queueSize(queueSize),
@@ -50,8 +50,8 @@ int ThreadPool::getRunningNum() const {
 }
 
 void ThreadPool::cleanHandler(void *arg) {
-    ((ThreadPool*)arg)->mutex.unlock();
     ((ThreadPool*)arg)->runningNum--;
+    ((ThreadPool*)arg)->mutex.unlock();
 }
 
 void* ThreadPool::taskRoutine(void *arg) {

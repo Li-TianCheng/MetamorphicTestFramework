@@ -6,7 +6,6 @@
 #define METAMORPHICTESTFRAMEWORK_SINGEN_HPP
 
 #include "GenSourceCase.h"
-#include <cstdlib>
 
 using std::shared_ptr;
 
@@ -17,13 +16,6 @@ public:
     };
 
     ~SinGen() noexcept override = default;
-    shared_ptr<GenSourceCase> clone() const & override{
-        return shared_ptr<GenSourceCase>(new SinGen(*this));
-    };
-
-    shared_ptr<GenSourceCase> clone() && override{
-        return shared_ptr<GenSourceCase>(new SinGen(*this));
-    };
 };
 
 

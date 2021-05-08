@@ -2,8 +2,8 @@
 // Created by ltc on 2/4/21.
 //
 
-#ifndef METAMORPHICTESTFRAMEWORK_METAMORPHICTEST_H
-#define METAMORPHICTESTFRAMEWORK_METAMORPHICTEST_H
+#ifndef METAMORPHICTESTFRAMEWORK_METAMORPHICTEST_HPP
+#define METAMORPHICTESTFRAMEWORK_METAMORPHICTEST_HPP
 
 #include <cstddef>
 #include <vector>
@@ -11,6 +11,7 @@
 #include "Program.h"
 #include "GenSourceCase.h"
 #include "lib_pthread/include/ThreadPool.h"
+#include "lib_pthread/include/Latch.h"
 
 namespace metamorphicTestFramework{
     using std::vector;
@@ -24,10 +25,10 @@ namespace metamorphicTestFramework{
         MetamorphicTest(size_t sourceCaseNum, size_t followCaseNum,
                         shared_ptr<GenSourceCase<T>>& generator, shared_ptr<Program<T, U>>& program,
                         vector<shared_ptr<MR<T, U>>>& mrs, ThreadPool* threadPool);
-        MetamorphicTest(const MetamorphicTest& m);
-        MetamorphicTest(MetamorphicTest&& m) noexcept;
-        MetamorphicTest& operator=(const MetamorphicTest& m);
-        MetamorphicTest& operator=(MetamorphicTest&& m) noexcept;
+        MetamorphicTest(const MetamorphicTest& m) = delete;
+        MetamorphicTest(MetamorphicTest&& m) = delete;
+        MetamorphicTest& operator=(const MetamorphicTest& m) = delete;
+        MetamorphicTest& operator=(MetamorphicTest&& m) = delete;
         ~MetamorphicTest() = default;
         void metamorphicTest();
         vector<double> analyzeResult(vector<double> (*f)(vector<vector<vector<bool>>>&));
@@ -36,6 +37,8 @@ namespace metamorphicTestFramework{
         static void sourceCaseTask(void* arg);
         static void followCaseTask(void* arg);
     private:
+        Latch sourceCaseLatch;
+        Latch followCaseLatch;
         ThreadPool* threadPool;
         size_t sourceCaseNum;
         size_t followCaseNum;
@@ -61,65 +64,7 @@ namespace metamorphicTestFramework{
       sourceCaseResults(sourceCaseNum),
       followCaseResults(mrs.size(), vector<vector<U>>(sourceCaseNum, vector<U>(followCaseNum))),
       metamorphicTestResults(mrs.size(), vector<vector<bool>>(sourceCaseNum, vector<bool>(followCaseNum))),
-      threadPool(threadPool){}
-
-    template<typename T, typename U> inline
-    MetamorphicTest<T, U>::MetamorphicTest(const MetamorphicTest& m)
-            : sourceCaseNum(m.sourceCaseNum), followCaseNum(m.followCaseNum), mrs(m.mrs),
-              generator(m.generator->clone()), program(m.program->clone()),
-              sourceCases(m.sourceCases), followCases(m.followCases),
-              sourceCaseResults(m.sourceCaseResults), followCaseResults(m.followCaseResults),
-              metamorphicTestResults(m.metamorphicTestResults),threadPool(m.threadPool){
-        for (int i = 0; i < mrs.size(); i++) {
-            mrs[i] = m.mrs[i]->clone();
-        }
-    }
-
-    template<typename T, typename U> inline
-    MetamorphicTest<T, U>::MetamorphicTest(MetamorphicTest &&m) noexcept
-    : sourceCaseNum(m.sourceCaseNum), followCaseNum(m.followCaseNum), generator(move(m.generator)),
-      program(move(m.program)), mrs(move(m.mrs)), sourceCases(move(m.sourceCases)),
-      followCases(move(m.followCases)), sourceCaseResults(move(m.sourceCaseResults)),
-      followCaseResults(move(m.followCaseResults)), metamorphicTestResults(move(m.metamorphicTestResults)),
-      threadPool(m.threadPool){}
-
-    template<typename T, typename U> inline
-    MetamorphicTest<T, U> &MetamorphicTest<T, U>::operator=(const MetamorphicTest &m) {
-        if(this == &m){
-            return *this;
-        }
-        sourceCaseNum = m.sourceCaseNum;
-        followCaseNum = m.followCaseNum;
-        sourceCases = m.sourceCases;
-        followCases = m.followCases;
-        sourceCaseResults = m.sourceCaseResults;
-        followCaseResults = m.followCaseResults;
-        metamorphicTestResults = m.metamorphicTestResults;
-        mrs = m.mrs;
-        threadPool = m.threadPool;
-        for (int i = 0; i < mrs.size(); i++) {
-            mrs[i] = m.mrs[i]->clone();
-        }
-        generator = m.generator->clone();
-        program = m.program->clone();
-        return *this;
-    }
-
-    template<typename T, typename U> inline
-    MetamorphicTest<T, U> &MetamorphicTest<T, U>::operator=(MetamorphicTest &&m) noexcept {
-        sourceCaseNum = m.sourceCaseNum;
-        followCaseNum = m.followCaseNum;
-        generator = move(m.generator);
-        program = move(m.program);
-        mrs = move(m.mrs);
-        sourceCases = move(m.sourceCases);
-        followCases = move(m.followCases);
-        sourceCaseResults = move(m.sourceCaseResults);
-        followCaseResults = move(m.followCaseResults);
-        metamorphicTestResults = move(m.metamorphicTestResults);
-        threadPool = m.threadPool;
-        return *this;
-    }
+      threadPool(threadPool), sourceCaseLatch(sourceCaseNum), followCaseLatch(mrs.size()*sourceCaseNum*followCaseNum){}
 
     template <typename T, typename U> inline
     void MetamorphicTest<T, U>::metamorphicTest() {
@@ -127,7 +72,7 @@ namespace metamorphicTestFramework{
             auto* arg = new tuple<MetamorphicTest*, int>(this, i);
             threadPool->addTask(&this->sourceCaseTask, arg);
         }
-        while (threadPool->getRunningNum() != 0){}
+        sourceCaseLatch.wait();
         for (int i = 0; i < mrs.size(); i++){
             for (int j = 0; j < sourceCaseNum; j++){
                 for (int k = 0; k < followCaseNum; k++){
@@ -136,7 +81,7 @@ namespace metamorphicTestFramework{
                 }
             }
         }
-        threadPool->join();
+        followCaseLatch.wait();
     }
 
     template <typename T, typename U> inline
@@ -157,6 +102,7 @@ namespace metamorphicTestFramework{
         m->sourceCases[i] = m->generator->genSourceCase();
         m->sourceCaseResults[i] = m->program->genResult(m->sourceCases[i]);
         delete (tuple<MetamorphicTest<T, U>*, int>*)arg;
+        m->sourceCaseLatch.done();
     }
 
     template<typename T, typename U>
@@ -173,8 +119,9 @@ namespace metamorphicTestFramework{
                                                              m->sourceCases[j],
                                                              m->followCases[i][j][k]);
         delete (tuple<MetamorphicTest<T, U>*, int>*)arg;
+        m->followCaseLatch.done();
     }
 }
 
 
-#endif //METAMORPHICTESTFRAMEWORK_METAMORPHICTEST_H
+#endif //METAMORPHICTESTFRAMEWORK_METAMORPHICTEST_HPP

@@ -12,8 +12,6 @@ namespace metamorphicTestFramework{
     public:
         virtual T genSourceCase() = 0;
         virtual ~GenSourceCase() = default;
-        virtual std::shared_ptr<GenSourceCase<T>> clone() const & = 0;
-        virtual std::shared_ptr<GenSourceCase<T>> clone() && = 0;
     };
 }
 

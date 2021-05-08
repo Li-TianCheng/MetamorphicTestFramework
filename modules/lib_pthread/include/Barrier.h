@@ -5,7 +5,7 @@
 #ifndef LIBPTHREAD_BARRIER_H
 #define LIBPTHREAD_BARRIER_H
 
-#include <Condition.h>
+#include "Condition.h"
 
 class Barrier {
 public:

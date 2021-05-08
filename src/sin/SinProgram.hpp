@@ -16,12 +16,7 @@ public:
         return sin(testCase);
     };
 
-    shared_ptr<Program> clone() const & override{
-        return shared_ptr<Program>(new SinProgram(*this));
-    };
-    shared_ptr<Program> clone() && override{
-        return shared_ptr<Program>(new SinProgram(*this));
-    };
+    ~SinProgram() noexcept override = default;
 };
 
 

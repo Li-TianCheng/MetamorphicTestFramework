@@ -2,7 +2,7 @@
 // Created by ltc on 2021/3/7.
 //
 
-#include "../include/Condition.h"
+#include "Condition.h"
 #include <stdexcept>
 #include <sys/time.h>
 

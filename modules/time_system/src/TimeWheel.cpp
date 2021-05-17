@@ -11,9 +11,9 @@ TimeWheel::TimeWheel(): millisecond(1000), second(60), minute(60), hour(24),
 
 void TimeWheel::cycle() {
     while (true) {
-        Event e = getEvent();
-        if (e != "null"){
-            if (e == "end_event"){
+        Event* e = getEvent();
+        if (e != nullptr){
+            if (e->eventType == EventEndCycle){
                 break;
             }
             doEvent(e);
@@ -23,57 +23,63 @@ void TimeWheel::cycle() {
 }
 
 void TimeWheel::init() {
-    registerEvent("timer_event", handleTimerEvent);
-    registerEvent("ticker_event", handleTickerEvent);
-    registerEvent("end_event", nullptr);
+    registerEvent(EventTimer, handleTimerEvent);
+    registerEvent(EventTicker, handleTickerEvent);
+    registerEvent(EventTimerTimeOut, handleTimerTimeOut);
+    registerEvent(EventTickerTimeOut, handleTickerTimeOut);
+    registerEvent(EventEndCycle, nullptr);
 }
 
-void TimeWheel::handleTimerEvent(void *arg, EventSystem* ptr) {
-    if (arg == nullptr){
+void TimeWheel::handleTimerEvent(Event* e) {
+    if (e->arg == nullptr){
         return;
     }
-    Time* input = (Time*)arg;
+    Time* input = (Time*)e->arg;
     TimeWheel* t = input->tPtr;
+    Event* _e = ObjPool::allocate<Event>(EventTimerTimeOut, input, e->ptr);
     if (input->h != 0){
-        t->hour[(t->hIter+input->h)%24].push(Event("timer_event", arg, ptr));
+        t->hour[(t->hIter+input->h)%24].push(_e);
         return;
     }
     if (input->m != 0){
-        t->minute[(t->mIter+input->m)%60].push(Event("timer_event", arg, ptr));
+        t->minute[(t->mIter+input->m)%60].push(_e);
         return;
     }
     if (input->s != 0){
-        t->second[(t->sIter+input->s)%60].push(Event("timer_event", arg, ptr));
+        t->second[(t->sIter+input->s)%60].push(_e);
         return;
     }
     if (input->ms != 0){
-        t->millisecond[(t->msIter+input->ms)%1000].push(Event("timer_event", arg, ptr));
+        t->millisecond[(t->msIter+input->ms)%1000].push(_e);
         return;
     }
+    ObjPool::deallocate(_e);
 }
 
-void TimeWheel::handleTickerEvent(void *arg, EventSystem* ptr) {
-    if (arg == nullptr){
+void TimeWheel::handleTickerEvent(Event* e) {
+    if (e->arg == nullptr){
         return;
     }
-    Time* input = (Time*)arg;
+    Time* input = (Time*)e->arg;
     TimeWheel* t = input->tPtr;
+    Event* _e = ObjPool::allocate<Event>(EventTickerTimeOut, input, e->ptr);
     if (input->h != 0){
-        t->hour[(t->hIter+input->h)%24].push(Event("ticker_event", arg, ptr));
+        t->hour[(t->hIter+input->h)%24].push(_e);
         return;
     }
     if (input->m != 0){
-        t->minute[(t->mIter+input->m)%60].push(Event("ticker_event", arg, ptr));
+        t->minute[(t->mIter+input->m)%60].push(_e);
         return;
     }
     if (input->s != 0){
-        t->second[(t->sIter+input->s)%60].push(Event("ticker_event", arg, ptr));
+        t->second[(t->sIter+input->s)%60].push(_e);
         return;
     }
     if (input->ms != 0){
-        t->millisecond[(t->msIter+input->ms)%1000].push(Event("ticker_event", arg, ptr));
+        t->millisecond[(t->msIter+input->ms)%1000].push(_e);
         return;
     }
+    ObjPool::deallocate(_e);
 }
 
 void TimeWheel::check() {
@@ -82,37 +88,32 @@ void TimeWheel::check() {
     }
     currentTime = getCurrentTime();
     while (!millisecond[msIter].empty()){
-        Event e = millisecond[msIter].front();
-        if (e == "ticker_event"){
-            doEvent(e);
-        }
-        if (e.ptr != nullptr){
-            e.ptr->addEvent("time_out", nullptr, this);
-        }
+        Event* e = millisecond[msIter].front();
+        doEvent(e);
         millisecond[msIter].pop();
     }
     msIter = (msIter+1) % 1000;
     if (msIter == 0){
         sIter = (sIter+1) % 60;
         while(!second[sIter].empty()){
-            Event e = second[sIter].front();
-            millisecond[((Time*)e.arg)->ms].push(e);
+            Event* e = second[sIter].front();
+            millisecond[((Time*)e->arg)->ms].push(e);
             second[sIter].pop();
         }
     }
     if (sIter == 0){
         mIter = (mIter+1) % 60;
         while(!minute[mIter].empty()){
-            Event e = minute[mIter].front();
-            second[((Time*)e.arg)->s].push(e);
+            Event* e = minute[mIter].front();
+            second[((Time*)e->arg)->s].push(e);
             minute[mIter].pop();
         }
     }
     if (mIter == 0){
         hIter = (hIter+1) % 24;
         while(!hour[hIter].empty()){
-            Event e = hour[hIter].front();
-            minute[((Time*)e.arg)->m].push(e);
+            Event* e = hour[hIter].front();
+            minute[((Time*)e->arg)->m].push(e);
             hour[hIter].pop();
         }
     }
@@ -124,4 +125,19 @@ u_long TimeWheel::getCurrentTime() {
     return t.tv_sec*1e6+t.tv_usec;
 }
 
+void TimeWheel::handleTimerTimeOut(Event *e) {
+    if (e->ptr != nullptr){
+        Event* _e = ObjPool::allocate<Event>(EventTimerTimeOut, e->ptr, ((Time*)e)->tPtr);
+        e->ptr->addEvent(_e);
+    }
+}
+
+void TimeWheel::handleTickerTimeOut(Event *e) {
+    if (e->ptr != nullptr){
+        Event* _e = ObjPool::allocate<Event>(EventTickerTimeOut, e->ptr, ((Time*)e)->tPtr);
+        e->ptr->addEvent(_e);
+    }
+    Event* _e = ObjPool::allocate<Event>(EventTicker, e->arg, e->ptr);
+    handleTickerEvent(_e);
+}
 

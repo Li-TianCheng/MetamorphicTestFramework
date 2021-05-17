@@ -4,35 +4,36 @@
 
 #include "EventSystem.h"
 
-void EventSystem::registerEvent(const string& name, void (*handleEvent)(void*, EventSystem*)) {
-    map[name] = handleEvent;
+void EventSystem::registerEvent(int eventType, void (*handleEvent)(Event*)) {
+    map[eventType] = handleEvent;
 }
 
-void EventSystem::unregisterEvent(const string& name) {
-    map.erase(name);
+void EventSystem::unregisterEvent(int eventType) {
+    map.erase(eventType);
 }
 
-void EventSystem::addEvent(const string& name, void* arg, EventSystem* ptr) {
+void EventSystem::addEvent(Event* e) {
     mutex.lock();
-    eventQueue.push(Event(name, arg, ptr));
+    eventQueue.push(e);
     mutex.unlock();
 }
 
-void EventSystem::doEvent(Event& e) {
-    if (map.find(e.name) != map.end()){
-        map[e.name](e.arg, e.ptr);
+void EventSystem::doEvent(Event* e) {
+    if (map.find(e->eventType) != map.end()){
+        map[e->eventType](e);
     }
+    ObjPool::deallocate(e);
 }
 
-Event EventSystem::getEvent() {
+Event* EventSystem::getEvent() {
     if (!mutex.tryLock()){
-        return Event("null", nullptr, nullptr);
+        return nullptr;
     }
     if (eventQueue.empty()) {
         mutex.unlock();
-        return Event("null", nullptr, nullptr);
+        return nullptr;
     }
-    Event e = eventQueue.front();
+    Event* e = eventQueue.front();
     eventQueue.pop();
     mutex.unlock();
     return e;

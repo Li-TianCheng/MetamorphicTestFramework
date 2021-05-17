@@ -8,8 +8,10 @@
 #include <unordered_map>
 #include <string>
 #include <queue>
-
+#include "mem_pool/include/ObjPool.hpp"
 #include "my_pthread/include/Mutex.h"
+#include "my_pthread/include/Thread.h"
+#include "EventKey.h"
 
 using std::unordered_map;
 using std::string;
@@ -18,35 +20,30 @@ using std::queue;
 class EventSystem;
 
 struct Event{
-    string name;
+    int eventType;
     EventSystem* ptr;
     void* arg;
-    Event(string name, void* arg, EventSystem* ptr) : name(std::move(name)), arg(arg), ptr(ptr){};
-    bool operator==(const string& n) const{
-        return name == n;
-    }
-    bool operator!=(const string& n) const{
-        return name != n;
-    }
+    Event(int eventType, void* arg, EventSystem* ptr) : eventType(eventType), arg(arg), ptr(ptr){};
 };
 
 class EventSystem {
 public:
     EventSystem() = default;
-    void registerEvent(const string& name, void (*handleEvent)(void*, EventSystem*));
-    void unregisterEvent(const string& name);
-    void addEvent(const string& name, void* arg, EventSystem* ptr);
-    void doEvent(Event& e);
-    Event getEvent();
+    void registerEvent(int eventType, void (*handleEvent)(Event*));
+    void unregisterEvent(int eventType);
+    void addEvent(Event* e);
+    void doEvent(Event* e);
+    Event* getEvent();
     virtual void cycle() = 0;
     EventSystem(const EventSystem &) = delete;
     EventSystem(EventSystem&&) = delete;
     EventSystem& operator=(const EventSystem&) = delete;
     EventSystem& operator=(EventSystem&&) = delete;
 private:
-    unordered_map<string, void(*)(void*, EventSystem*)> map;
-    queue<Event> eventQueue;
+    unordered_map<int, void(*)(Event*)> map;
+    queue<Event*> eventQueue;
     Mutex mutex;
+    vector<Thread> worker;
 };
 
 

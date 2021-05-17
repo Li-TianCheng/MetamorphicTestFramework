@@ -5,22 +5,24 @@
 #include "TimeSystem.h"
 
 void TimeSystem::init() {
+    getTimeWheel();
     getThread().run(handle, nullptr);
 }
 
 void *TimeSystem::handle(void *) {
     getTimeWheel().cycle();
-    return nullptr;
 }
 
 void TimeSystem::close() {
-    getTimeWheel().addEvent("end_event", nullptr, nullptr);
+    Event* e = ObjPool::allocate<Event>(EventEndCycle, nullptr, nullptr);
+    getTimeWheel().addEvent(e);
     getThread().join();
 }
 
-void TimeSystem::addEvent(const string& name, Time *arg, EventSystem *ptr) {
+void TimeSystem::addEvent(int eventType, Time *arg, EventSystem *ptr) {
     arg->tPtr = &getTimeWheel();
-    getTimeWheel().addEvent(name, arg, ptr);
+    Event* e = ObjPool::allocate<Event>(eventType, arg, ptr);
+    getTimeWheel().addEvent(e);
 }
 
 TimeWheel &TimeSystem::getTimeWheel() {

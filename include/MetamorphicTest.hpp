@@ -7,12 +7,13 @@
 
 #include <cstddef>
 #include <vector>
+#include <memory>
 #include "MR.h"
 #include "Program.h"
 #include "GenSourceCase.h"
-#include "my_pthread/include/TaskManager.h"
 #include "my_pthread/include/Latch.h"
 #include "mem_pool/include/ObjPool.hpp"
+#include "task_system/include/TaskSystem.h"
 
 namespace metamorphicTestFramework{
     using std::vector;
@@ -68,14 +69,14 @@ namespace metamorphicTestFramework{
     void MetamorphicTest<T, U>::metamorphicTest() {
         for (int i = 0; i < sourceCaseNum; i++){
             auto* arg = ObjPool::allocate<tuple<MetamorphicTest*, int>>(this, i);
-            TaskManager::addTask(&this->sourceCaseTask, arg);
+            TaskSystem::addTask(&this->sourceCaseTask, arg);
         }
         sourceCaseLatch.wait();
         for (int i = 0; i < mrs.size(); i++){
             for (int j = 0; j < sourceCaseNum; j++){
                 for (int k = 0; k < followCaseNum; k++){
                     auto* arg = ObjPool::allocate<tuple<MetamorphicTest*, int, int, int>>(this, i, j, k);
-                    TaskManager::addTask(&this->followCaseTask, arg);
+                    TaskSystem::addTask(&this->followCaseTask, arg);
                 }
             }
         }

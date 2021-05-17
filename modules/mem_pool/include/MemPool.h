@@ -8,6 +8,7 @@
 #include "ManageChunk.h"
 #include "../../my_pthread/include/Mutex.h"
 #include <vector>
+#include <unordered_set>
 
 using std::vector;
 
@@ -16,11 +17,13 @@ public:
     explicit MemPool(int num);
     void* allocate(size_t size);
     void deallocate(void* ptr, size_t size);
+    ~MemPool();
     MemPool(const MemPool&) = delete;
     MemPool(MemPool&&) = delete;
     void operator=(const MemPool&) = delete;
     void operator=(MemPool&&) = delete;
 private:
+    std::unordered_set<void*> smallObj;
     vector<ManageChunk> mem;
     vector<Mutex> mutex;
     int num;

@@ -7,7 +7,7 @@
 
 #include "MemPool.h"
 
-#define CHUNK_SIZE 100
+static const int ChunkSize      = 100;
 
 class ObjPool{
 public:
@@ -16,10 +16,11 @@ public:
 
     template<typename T>
     static void deallocate(T* ptr);
-
+    static void init();
+    static void close();
     ObjPool() = delete;
     ObjPool(const ObjPool&) = delete;
-    ObjPool(TaskManager&&) = delete;
+    ObjPool(ObjPool&&) = delete;
     void operator=(const ObjPool&) = delete;
     void operator=(ObjPool&&) = delete;
 private:
@@ -29,7 +30,7 @@ private:
 template<typename T, typename... Args> inline
 T* ObjPool::allocate(Args... args) {
     void* ptr = getInstance().allocate(sizeof(T));
-    return new(ptr) T(args...);
+    return ::new(ptr) T(args...);
 }
 
 template<typename T> inline
@@ -38,9 +39,15 @@ void ObjPool::deallocate(T* ptr) {
     getInstance().deallocate(ptr, sizeof(T));
 }
 
-MemPool& ObjPool::getInstance() {
-    static MemPool memPool(CHUNK_SIZE);
+inline MemPool& ObjPool::getInstance() {
+    static MemPool memPool(ChunkSize);
     return memPool;
+}
+
+inline void ObjPool::close() {}
+
+inline void ObjPool::init() {
+    getInstance();
 }
 
 #endif //MEMPOOL_OBJPOOL_HPP

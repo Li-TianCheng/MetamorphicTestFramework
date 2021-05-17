@@ -4,18 +4,18 @@
 
 #include "EventSystem.h"
 
-void EventSystem::registerEvent(int eventType, void (*handleEvent)(Event*)) {
+void EventSystem::registerEvent(EventKey eventType, void (*handleEvent)(Event*)) {
     map[eventType] = handleEvent;
 }
 
-void EventSystem::unregisterEvent(int eventType) {
+void EventSystem::unregisterEvent(EventKey eventType) {
     map.erase(eventType);
 }
 
-void EventSystem::addEvent(Event* e) {
+void EventSystem::receiveEvent(Event* e) {
     mutex.lock();
     eventQueue.push(e);
-    mutex.unlock();
+    condition.notifyAll(mutex);
 }
 
 void EventSystem::doEvent(Event* e) {
@@ -26,16 +26,31 @@ void EventSystem::doEvent(Event* e) {
 }
 
 Event* EventSystem::getEvent() {
-    if (!mutex.tryLock()){
-        return nullptr;
-    }
-    if (eventQueue.empty()) {
-        mutex.unlock();
-        return nullptr;
+    mutex.lock();
+    while (eventQueue.empty()){
+        condition.wait(mutex);
     }
     Event* e = eventQueue.front();
     eventQueue.pop();
-    mutex.unlock();
+    condition.notifyAll(mutex);
     return e;
 }
+
+void EventSystem::cycle() {
+    cycleInit();
+    while (true) {
+        Event* e = getEvent();
+        if (e != nullptr){
+            if (e->eventType == EventEndCycle){
+                break;
+            }
+            doEvent(e);
+        }
+    }
+    cycleClear();
+}
+
+void EventSystem::cycleInit() {}
+
+void EventSystem::cycleClear() {}
 

@@ -25,15 +25,12 @@ struct Time{
 class TimeWheel: public EventSystem {
 public:
     TimeWheel();
-    void cycle() override;
     TimeWheel(const TimeWheel&) = delete;
     TimeWheel(TimeWheel&&) = delete;
     TimeWheel& operator=(const TimeWheel&) = delete;
     TimeWheel& operator=(TimeWheel&&) = delete;
 private:
     void init();
-    void check();
-    static u_long getCurrentTime();
     vector<queue<Event*>> millisecond;
     vector<queue<Event*>> second;
     vector<queue<Event*>> minute;
@@ -42,11 +39,11 @@ private:
     int sIter;
     int mIter;
     int hIter;
-    u_long currentTime;
     static void handleTimerEvent(Event* e);
     static void handleTickerEvent(Event* e);
     static void handleTimerTimeOut(Event* e);
     static void handleTickerTimeOut(Event* e);
+    static void handleTimeOut(Event* e);
 };
 
 #endif //TIMESYSTEM_TIMEWHEEL_H

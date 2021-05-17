@@ -4,16 +4,13 @@
 #include "src/sin/SinGen.hpp"
 #include "src/sin/SinMR1.hpp"
 #include "src/sin/SinProgram.hpp"
-#include "modules/time_system/include/TimeSystem.h"
-#include "modules/task_system/include/TaskSystem.h"
+#include "Modules.h"
 
 int main() {
     using namespace metamorphicTestFramework;
     using namespace std;
 
-    ObjPool::init();
-    TimeSystem::init();
-    TaskSystem::init();
+    modules::init();
 
     // sin test
     vector<shared_ptr<MR<double, double>>> sinMrs;
@@ -25,9 +22,7 @@ int main() {
     sinTest.metamorphicTest();
     auto re = sinTest.getMetamorphicTestResult();
 
-    TaskSystem::close();
-    TimeSystem::close();
-    ObjPool::close();
+    modules::close();
     cout << "hello world" << endl;
     return 0;
 }

@@ -9,8 +9,7 @@
 #include <string>
 #include <queue>
 #include "mem_pool/include/ObjPool.hpp"
-#include "my_pthread/include/Mutex.h"
-#include "my_pthread/include/Thread.h"
+#include "my_pthread/include/Condition.h"
 #include "EventKey.h"
 
 using std::unordered_map;
@@ -20,30 +19,32 @@ using std::queue;
 class EventSystem;
 
 struct Event{
-    int eventType;
+    EventKey eventType;
     EventSystem* ptr;
     void* arg;
-    Event(int eventType, void* arg, EventSystem* ptr) : eventType(eventType), arg(arg), ptr(ptr){};
+    Event(EventKey eventType, void* arg, EventSystem* ptr) : eventType(eventType), arg(arg), ptr(ptr){};
 };
 
 class EventSystem {
 public:
     EventSystem() = default;
-    void registerEvent(int eventType, void (*handleEvent)(Event*));
-    void unregisterEvent(int eventType);
-    void addEvent(Event* e);
+    void registerEvent(EventKey eventType, void (*handleEvent)(Event*));
+    void unregisterEvent(EventKey eventType);
+    void receiveEvent(Event* e);
     void doEvent(Event* e);
     Event* getEvent();
-    virtual void cycle() = 0;
+    void cycle();
+    virtual void cycleInit();
+    virtual void cycleClear();
     EventSystem(const EventSystem &) = delete;
     EventSystem(EventSystem&&) = delete;
     EventSystem& operator=(const EventSystem&) = delete;
     EventSystem& operator=(EventSystem&&) = delete;
 private:
-    unordered_map<int, void(*)(Event*)> map;
+    unordered_map<EventKey, void(*)(Event*)> map;
     queue<Event*> eventQueue;
     Mutex mutex;
-    vector<Thread> worker;
+    Condition condition;
 };
 
 

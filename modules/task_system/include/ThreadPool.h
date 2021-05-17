@@ -28,7 +28,8 @@ class ThreadPool: public EventSystem {
 public:
     ThreadPool(int initNum, int queueSize);
     void addTask(void (*task)(void*), void* arg);
-    void cycle() override;
+    void cycleInit() override;
+    void cycleClear() override;
     ThreadPool(const ThreadPool&) = delete;
     ThreadPool(ThreadPool&&) = delete;
     void operator=(const ThreadPool&) = delete;

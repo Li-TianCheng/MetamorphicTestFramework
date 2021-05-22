@@ -1,5 +1,6 @@
 #include <iostream>
 #include <memory>
+#include <zconf.h>
 #include "MetamorphicTest.hpp"
 #include "src/sin/SinGen.hpp"
 #include "src/sin/SinMR1.hpp"

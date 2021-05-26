@@ -14,6 +14,7 @@
 #include "my_pthread/include/Latch.h"
 #include "mem_pool/include/ObjPool.hpp"
 #include "task_system/include/TaskSystem.h"
+#include "utils/include/ProgressBar.h"
 
 namespace metamorphicTestFramework{
     using std::vector;
@@ -50,6 +51,8 @@ namespace metamorphicTestFramework{
         vector<U> sourceCaseResults;
         vector<vector<vector<U>>> followCaseResults;
         vector<vector<vector<bool>>> metamorphicTestResults;
+        ProgressBar barSource;
+        ProgressBar barFollow;
     };
 
     template <typename T, typename U> inline
@@ -63,15 +66,20 @@ namespace metamorphicTestFramework{
       sourceCaseResults(sourceCaseNum),
       followCaseResults(mrs.size(), vector<vector<U>>(sourceCaseNum, vector<U>(followCaseNum))),
       metamorphicTestResults(mrs.size(), vector<vector<bool>>(sourceCaseNum, vector<bool>(followCaseNum))),
-      sourceCaseLatch(sourceCaseNum), followCaseLatch(mrs.size()*sourceCaseNum*followCaseNum){}
+      sourceCaseLatch(sourceCaseNum), followCaseLatch(mrs.size()*sourceCaseNum*followCaseNum),
+      barSource("source test case running", sourceCaseNum),
+      barFollow("follow test case running", mrs.size()*sourceCaseNum*followCaseNum){}
 
     template <typename T, typename U> inline
     void MetamorphicTest<T, U>::metamorphicTest() {
+        barSource.start();
         for (int i = 0; i < sourceCaseNum; i++){
             auto* arg = ObjPool::allocate<tuple<MetamorphicTest*, int>>(this, i);
             TaskSystem::addTask(&this->sourceCaseTask, arg);
         }
+        barSource.done();
         sourceCaseLatch.wait();
+        barFollow.start();
         for (int i = 0; i < mrs.size(); i++){
             for (int j = 0; j < sourceCaseNum; j++){
                 for (int k = 0; k < followCaseNum; k++){
@@ -101,6 +109,7 @@ namespace metamorphicTestFramework{
         m->sourceCases[i] = m->generator->genSourceCase();
         m->sourceCaseResults[i] = m->program->genResult(m->sourceCases[i]);
         ObjPool::deallocate((tuple<MetamorphicTest<T, U>*, int>*)arg);
+        m->barSource.done();
         m->sourceCaseLatch.done();
     }
 
@@ -118,6 +127,7 @@ namespace metamorphicTestFramework{
                                                              m->sourceCases[j],
                                                              m->followCases[i][j][k]);
         ObjPool::deallocate((tuple<MetamorphicTest<T, U>*, int, int, int>*)arg);
+        m->barFollow.done();
         m->followCaseLatch.done();
     }
 }

@@ -9,7 +9,7 @@
 int main() {
     using namespace metamorphicTestFramework;
     using namespace std;
-    // TODO Rpc Client
+
     // TODO MySql
     modules::init();
 

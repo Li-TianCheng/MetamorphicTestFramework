@@ -3,7 +3,7 @@
 //
 
 #include "RpcClient.h"
-
+#include <iostream>
 RpcClient::RpcClient(const string &address, AddressType addressType):tcpClient(address, addressType) {}
 
 vector<string> RpcClient::callFunction(const string &name, const string &type, vector<string> &args) {
@@ -12,12 +12,16 @@ vector<string> RpcClient::callFunction(const string &name, const string &type, v
     for (auto &arg : args) {
         cmd += arg + "$";
     }
-    cmd += "END$";
+    cmd += "END$$$$";
     tcpClient.connect();
     tcpClient.write(cmd);
     string result;
     while (true) {
-        result += tcpClient.read();
+        string temp = tcpClient.read();
+        if (temp.empty()){
+            return vector<string>();
+        }
+        result += temp;
         if (result.find("$END$") != string::npos) {
             tcpClient.close();
             break;

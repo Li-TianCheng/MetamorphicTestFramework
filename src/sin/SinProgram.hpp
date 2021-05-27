@@ -7,11 +7,20 @@
 
 #include "Program.h"
 #include <cmath>
+#include "RpcClient.h"
 
 class SinProgram : public metamorphicTestFramework::Program<double, double> {
 public:
     double genResult(double &testCase) override{
-        return sin(testCase);
+        vector<string> result;
+        RpcClient client("localhost:8000", IPV4);
+        vector<string> args;
+        args.push_back("--i "+to_string(testCase));
+        result = client.callFunction("sin", "python", args);
+        if (result.empty()) {
+            throw std::runtime_error("call function failed");
+        }
+        return stod(result[0]);
     };
 
     ~SinProgram() noexcept override = default;

@@ -77,8 +77,8 @@ namespace metamorphicTestFramework{
             auto* arg = ObjPool::allocate<tuple<MetamorphicTest*, int>>(this, i);
             TaskSystem::addTask(&this->sourceCaseTask, arg);
         }
-        barSource.done();
         sourceCaseLatch.wait();
+        barSource.done();
         barFollow.start();
         for (int i = 0; i < mrs.size(); i++){
             for (int j = 0; j < sourceCaseNum; j++){

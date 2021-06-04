@@ -7,12 +7,10 @@
 
 #include "net/include/TcpClient.h"
 
-class RpcClient {
+class RpcClient : public TcpClient {
 public:
     RpcClient(const string& address, AddressType addressType);
     vector<string> callFunction(const string &name, const string& type, vector<string>& args);
-private:
-    TcpClient tcpClient;
 };
 
 

@@ -3,8 +3,8 @@
 //
 
 #include "RpcClient.h"
-#include <iostream>
-RpcClient::RpcClient(const string &address, AddressType addressType):tcpClient(address, addressType) {}
+
+RpcClient::RpcClient(const string &address, AddressType addressType):TcpClient(address, addressType) {}
 
 vector<string> RpcClient::callFunction(const string &name, const string &type, vector<string> &args) {
     string cmd = "$START$FUNCTION$";
@@ -12,18 +12,16 @@ vector<string> RpcClient::callFunction(const string &name, const string &type, v
     for (auto &arg : args) {
         cmd += arg + "$";
     }
-    cmd += "END$$$$";
-    tcpClient.connect();
-    tcpClient.write(cmd);
+    cmd += "END$";
+    write(cmd);
     string result;
     while (true) {
-        string temp = tcpClient.read();
+        string temp = read();
         if (temp.empty()){
             return vector<string>();
         }
         result += temp;
         if (result.find("$END$") != string::npos) {
-            tcpClient.close();
             break;
         }
     }

@@ -53,6 +53,7 @@ namespace metamorphicTestFramework{
         vector<vector<vector<bool>>> metamorphicTestResults;
         ProgressBar barSource;
         ProgressBar barFollow;
+        Mutex mutex;
     };
 
     template <typename T, typename U> inline
@@ -106,8 +107,12 @@ namespace metamorphicTestFramework{
         tuple<MetamorphicTest<T, U>*, int> args = *(tuple<MetamorphicTest<T, U>*, int>*)arg;
         MetamorphicTest* m = std::get<0>(args);
         int i = std::get<1>(args);
-        m->sourceCases[i] = m->generator->genSourceCase();
-        m->sourceCaseResults[i] = m->program->genResult(m->sourceCases[i]);
+        T sourceCase = m->generator->genSourceCase();
+        U sourceCaseResult = m->program->genResult(m->sourceCases[i]);
+        m->mutex.lock();
+        m->sourceCases[i] = sourceCase;
+        m->sourceCaseResults[i] = sourceCaseResult;
+        m->mutex.unlock();
         ObjPool::deallocate((tuple<MetamorphicTest<T, U>*, int>*)arg);
         m->barSource.done();
         m->sourceCaseLatch.done();
@@ -120,12 +125,15 @@ namespace metamorphicTestFramework{
         int i = std::get<1>(args);
         int j = std::get<2>(args);
         int k = std::get<3>(args);
-        m->followCases[i][j][k] = m->mrs[i]->genFollowCase(m->sourceCases[j], m->sourceCaseResults[j]);
-        m->followCaseResults[i][j][k] = m->program->genResult(m->followCases[i][j][k]);
-        m->metamorphicTestResults[i][j][k] = m->mrs[i]->mrRelation(m->sourceCaseResults[j],
-                                                             m->followCaseResults[i][j][k],
-                                                             m->sourceCases[j],
-                                                             m->followCases[i][j][k]);
+        T followCase = m->mrs[i]->genFollowCase(m->sourceCases[j], m->sourceCaseResults[j]);
+        U followCaseResult = m->program->genResult(m->followCases[i][j][k]);
+        bool mr = m->mrs[i]->mrRelation(m->sourceCaseResults[j], m->followCaseResults[i][j][k],
+                                        m->sourceCases[j], m->followCases[i][j][k]);
+        m->mutex.lock();
+        m->followCases[i][j][k] = followCase;
+        m->followCaseResults[i][j][k] = followCaseResult;
+        m->metamorphicTestResults[i][j][k] = mr;
+        m->mutex.unlock();
         ObjPool::deallocate((tuple<MetamorphicTest<T, U>*, int, int, int>*)arg);
         m->barFollow.done();
         m->followCaseLatch.done();

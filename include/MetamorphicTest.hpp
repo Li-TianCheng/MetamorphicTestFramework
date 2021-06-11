@@ -28,7 +28,8 @@ namespace metamorphicTestFramework{
     public:
         MetamorphicTest(const string& name, size_t sourceCaseNum, size_t followCaseNum,
                         shared_ptr<GenSourceCase<T>>& generator, shared_ptr<Program<T, U>>& program,
-                        vector<shared_ptr<MR<T, U>>>& mrs, MySql* mysql=nullptr);
+                        vector<shared_ptr<MR<T, U>>>& mrs, shared_ptr<MySql> mysql=nullptr);
+        MetamorphicTest(int testId, shared_ptr<MySql> mysql);
         MetamorphicTest(const MetamorphicTest& m) = delete;
         MetamorphicTest(MetamorphicTest&& m) = delete;
         MetamorphicTest& operator=(const MetamorphicTest& m) = delete;
@@ -44,8 +45,12 @@ namespace metamorphicTestFramework{
         void insertSourceCaseInfo(int caseId, T& sourceCase, U& sourceCaseResult);
         void insertFollowCaseInfo(int mrId, int sourceCaseId, int followCaseId, T& followCase, U& followCaseResult);
         void insertMTestInfo(int mrId, int sourceCaseId, int followCaseId, bool result);
-        static void sourceCaseTask(void* arg);
-        static void followCaseTask(void* arg);
+        int getTestInfo();
+        void getSourceCaseInfo(int caseId);
+        void getFollowCaseInfo(int mrId, int sourceCaseId, int followCaseId);
+        void getMTestInfo(int mrId, int sourceCaseId, int followCaseId);
+        static void sourceCaseTask(shared_ptr<void> arg);
+        static void followCaseTask(shared_ptr<void> arg);
     private:
         string name;
         Latch sourceCaseLatch;
@@ -60,10 +65,10 @@ namespace metamorphicTestFramework{
         vector<U> sourceCaseResults;
         vector<vector<vector<U>>> followCaseResults;
         vector<vector<vector<bool>>> metamorphicTestResults;
-        ProgressBar barSource;
-        ProgressBar barFollow;
+        shared_ptr<ProgressBar> barSource;
+        shared_ptr<ProgressBar> barFollow;
         Mutex mutex;
-        MySql* mysql;
+        shared_ptr<MySql> mysql;
         int testId;
     };
 
@@ -72,34 +77,34 @@ namespace metamorphicTestFramework{
                                            size_t followCaseNum,
                                            shared_ptr<GenSourceCase<T>>& generator,
                                            shared_ptr<Program<T, U>>& program,
-                                           vector<shared_ptr<MR<T, U>>>& mrs, MySql* mysql)
+                                           vector<shared_ptr<MR<T, U>>>& mrs, shared_ptr<MySql> mysql)
     : sourceCaseNum(sourceCaseNum), followCaseNum(followCaseNum), generator(generator), program(program), mrs(mrs),
       sourceCases(sourceCaseNum), followCases(mrs.size(), vector<vector<T>>(sourceCaseNum, vector<T>(followCaseNum))),
       sourceCaseResults(sourceCaseNum),
       followCaseResults(mrs.size(), vector<vector<U>>(sourceCaseNum, vector<U>(followCaseNum))),
       metamorphicTestResults(mrs.size(), vector<vector<bool>>(sourceCaseNum, vector<bool>(followCaseNum))),
-      sourceCaseLatch(sourceCaseNum), followCaseLatch(mrs.size()*sourceCaseNum*followCaseNum),
-      barSource("source test case running", sourceCaseNum),
-      barFollow("follow test case running", mrs.size()*sourceCaseNum*followCaseNum), mysql(mysql), name(name){
-        createTables();
-        insertTestInfo();
-        getTestId();
+      sourceCaseLatch(sourceCaseNum), followCaseLatch(mrs.size()*sourceCaseNum*followCaseNum), mysql(mysql), name(name){
+          barSource = ObjPool::allocate<ProgressBar>("source test case running", sourceCaseNum);
+          barFollow = ObjPool::allocate<ProgressBar>("follow test case running", mrs.size()*sourceCaseNum*followCaseNum);
+          createTables();
+          insertTestInfo();
+          getTestId();
       }
 
     template <typename T, typename U> inline
     void MetamorphicTest<T, U>::metamorphicTest() {
-        barSource.start();
+        barSource->start();
         for (int i = 0; i < sourceCaseNum; i++){
-            auto* arg = ObjPool::allocate<tuple<MetamorphicTest*, int>>(this, i);
+            auto arg = ObjPool::allocate<tuple<MetamorphicTest*, int>>(this, i);
             TaskSystem::addTask(&this->sourceCaseTask, arg);
         }
         sourceCaseLatch.wait();
-        barSource.done();
-        barFollow.start();
+        barSource->done();
+        barFollow->start();
         for (int i = 0; i < mrs.size(); i++){
             for (int j = 0; j < sourceCaseNum; j++){
                 for (int k = 0; k < followCaseNum; k++){
-                    auto* arg = ObjPool::allocate<tuple<MetamorphicTest*, int, int, int>>(this, i, j, k);
+                    auto arg = ObjPool::allocate<tuple<MetamorphicTest*, int, int, int>>(this, i, j, k);
                     TaskSystem::addTask(&this->followCaseTask, arg);
                 }
             }
@@ -118,42 +123,40 @@ namespace metamorphicTestFramework{
     }
 
     template<typename T, typename U> inline
-    void MetamorphicTest<T, U>::sourceCaseTask(void *arg) {
-        tuple<MetamorphicTest<T, U>*, int> args = *(tuple<MetamorphicTest<T, U>*, int>*)arg;
+    void MetamorphicTest<T, U>::sourceCaseTask(shared_ptr<void> arg) {
+        tuple<MetamorphicTest<T, U>*, int> args = *static_pointer_cast<tuple<MetamorphicTest<T, U>*, int>>(arg);
         MetamorphicTest* m = std::get<0>(args);
         int i = std::get<1>(args);
         T sourceCase = m->generator->genSourceCase();
-        U sourceCaseResult = m->program->genResult(m->sourceCases[i]);
+        U sourceCaseResult = m->program->genResult(sourceCase);
         m->insertSourceCaseInfo(i, sourceCase, sourceCaseResult);
         m->mutex.lock();
         m->sourceCases[i] = sourceCase;
         m->sourceCaseResults[i] = sourceCaseResult;
         m->mutex.unlock();
-        ObjPool::deallocate((tuple<MetamorphicTest<T, U>*, int>*)arg);
-        m->barSource.done();
+        m->barSource->done();
         m->sourceCaseLatch.done();
     }
 
     template<typename T, typename U> inline
-    void MetamorphicTest<T, U>::followCaseTask(void *arg) {
-        tuple<MetamorphicTest<T, U>*, int, int, int> args = *(tuple<MetamorphicTest<T, U>*, int, int, int>*)arg;
+    void MetamorphicTest<T, U>::followCaseTask(shared_ptr<void> arg) {
+        tuple<MetamorphicTest<T, U>*, int, int, int> args = *static_pointer_cast<tuple<MetamorphicTest<T, U>*, int, int, int>>(arg);
         MetamorphicTest* m = std::get<0>(args);
         int i = std::get<1>(args);
         int j = std::get<2>(args);
         int k = std::get<3>(args);
         T followCase = m->mrs[i]->genFollowCase(m->sourceCases[j], m->sourceCaseResults[j]);
-        U followCaseResult = m->program->genResult(m->followCases[i][j][k]);
+        U followCaseResult = m->program->genResult(followCase);
         m->insertFollowCaseInfo(i, j, k, followCase, followCaseResult);
-        bool mr = m->mrs[i]->mrRelation(m->sourceCaseResults[j], m->followCaseResults[i][j][k],
-                                        m->sourceCases[j], m->followCases[i][j][k]);
+        bool mr = m->mrs[i]->mrRelation(m->sourceCaseResults[j], followCaseResult,
+                                        m->sourceCases[j], followCase);
         m->insertMTestInfo(i, j, k, mr);
         m->mutex.lock();
         m->followCases[i][j][k] = followCase;
         m->followCaseResults[i][j][k] = followCaseResult;
         m->metamorphicTestResults[i][j][k] = mr;
         m->mutex.unlock();
-        ObjPool::deallocate((tuple<MetamorphicTest<T, U>*, int, int, int>*)arg);
-        m->barFollow.done();
+        m->barFollow->done();
         m->followCaseLatch.done();
     }
 
@@ -172,8 +175,8 @@ namespace metamorphicTestFramework{
                          "`id` INT UNSIGNED AUTO_INCREMENT,"
                          "`test_id` INT UNSIGNED NOT NULL,"
                          "`source_case_id` INT UNSIGNED NOT NULL,"
-                         "`source_case` JSON NOT NULL,"
-                         "`source_case_result` JSON NOT NULL,"
+                         "`source_case` VARCHAR(1024) NOT NULL,"
+                         "`source_case_result` VARCHAR(1024) NOT NULL,"
                          "PRIMARY KEY(`id`)"
                          ")ENGINE=InnoDB DEFAULT CHARSET=utf8;"
                          "CREATE TABLE IF NOT EXISTS `follow_case_info`("
@@ -182,8 +185,8 @@ namespace metamorphicTestFramework{
                          "`mr_id` INT UNSIGNED NOT NULL,"
                          "`source_case_id` INT UNSIGNED NOT NULL,"
                          "`follow_case_id` INT UNSIGNED NOT NULL,"
-                         "`follow_case` JSON NOT NULL,"
-                         "`follow_case_result` JSON NOT NULL,"
+                         "`follow_case` VARCHAR(1024) NOT NULL,"
+                         "`follow_case_result` VARCHAR(1024) NOT NULL,"
                          "PRIMARY KEY(`id`)"
                          ")ENGINE=InnoDB DEFAULT CHARSET=utf8;"
                          "CREATE TABLE IF NOT EXISTS `metamorphic_test_info`("
@@ -204,8 +207,8 @@ namespace metamorphicTestFramework{
         if (mysql != nullptr) {
             string sql = "INSERT INTO source_case_info (test_id, source_case_id, source_case, source_case_result) "
                          "VALUES (" + to_string(testId) + "," + to_string(caseId) + ",'" +
-                         Serialize::serialize(sourceCase).toStyledString() + "','"
-                         + Serialize::serialize(sourceCaseResult).toStyledString() + "');";
+                         serialize(sourceCase) + "','"
+                         + serialize(sourceCaseResult) + "');";
             mysql->executeSQL(sql);
         }
     }
@@ -217,8 +220,8 @@ namespace metamorphicTestFramework{
             string sql = "INSERT INTO follow_case_info (test_id, mr_id, source_case_id, follow_case_id, follow_case, follow_case_result) "
                          "VALUES (" + to_string(testId) + "," + to_string(mrId) + "," +
                          to_string(sourceCaseId) + "," + to_string(followCaseId) + ",'" +
-                         Serialize::serialize(followCase).toStyledString() + "','" +
-                         Serialize::serialize(followCaseResult).toStyledString() + "');" ;
+                         serialize(followCase) + "','" +
+                         serialize(followCaseResult) + "');" ;
             mysql->executeSQL(sql);
         }
     }
@@ -249,11 +252,66 @@ namespace metamorphicTestFramework{
     void MetamorphicTest<T, U>::getTestId() {
         if (mysql != nullptr) {
             string sql = "SELECT test_id FROM test_info WHERE test_name=\"" + name + "\" AND mr_num=" + to_string(mrs.size()) + " AND source_case_num=" + to_string(sourceCaseNum) + " AND follow_case_num=" +to_string(followCaseNum) + " ORDER BY test_id DESC LIMIT 1";
-            Connection* conn = mysql->queryData(sql);
-            MYSQL_ROW row = mysql_fetch_row(conn->result[0]);
-            testId = stoi(row[0]);
-            mysql->freeQueryData(conn);
+            vector<vector<unordered_map<string,string>>> result = mysql->queryData(sql);
+            testId = stoi(result[0][0]["test_id"]);
         }
+    }
+
+    template<typename T, typename U>
+    MetamorphicTest<T, U>::MetamorphicTest(int testId, shared_ptr<MySql> mysql) : testId(testId), mysql(mysql), sourceCaseLatch(0), followCaseLatch(0), barSource(nullptr), barFollow(nullptr) {
+        int mrNum = getTestInfo();
+        sourceCases = vector<T>(sourceCaseNum);
+        sourceCaseResults = vector<U>(sourceCaseNum);
+        followCases = vector<vector<vector<T>>>(mrNum, vector<vector<T>>(sourceCaseNum, vector<T>(followCaseNum)));
+        followCaseResults = vector<vector<vector<U>>>(mrNum, vector<vector<U>>(sourceCaseNum, vector<U>(followCaseNum)));
+        metamorphicTestResults = vector<vector<vector<bool>>>(mrNum, vector<vector<bool>>(sourceCaseNum, vector<bool>(followCaseNum)));
+        for (int i = 0; i < sourceCaseNum; i++) {
+            getSourceCaseInfo(i);
+        }
+        for (int i = 0; i < mrNum; i++) {
+            for (int j = 0; j < sourceCaseNum; j++) {
+                for (int k = 0; k < followCaseNum; k++) {
+                    getFollowCaseInfo(i, j, k);
+                    getMTestInfo(i, j, k);
+                }
+            }
+        }
+    }
+
+    template<typename T, typename U>
+    int MetamorphicTest<T, U>::getTestInfo() {
+        string sql = "SELECT * FROM test_info WHERE test_id=" + to_string(testId) + ";";
+        vector<vector<unordered_map<string,string>>> result = mysql->queryData(sql);
+        name = result[0][0]["test_name"];
+        int mrNum = stoi(result[0][0]["mr_num"]);
+        sourceCaseNum = stoi(result[0][0]["source_case_num"]);
+        followCaseNum = stoi(result[0][0]["follow_case_num"]);
+        return mrNum;
+    }
+
+    template<typename T, typename U>
+    void MetamorphicTest<T, U>::getSourceCaseInfo(int caseId) {
+        string sql = "SELECT * FROM source_case_info WHERE test_id=" + to_string(testId) + " AND source_case_id=" + to_string(caseId) + ";";
+        vector<vector<unordered_map<string,string>>> result = mysql->queryData(sql);
+        sourceCases[caseId] = deserialize<T>(result[0][0]["source_case"]);
+        sourceCaseResults[caseId] = deserialize<U>(result[0][0]["source_case_result"]);
+    }
+
+    template<typename T, typename U>
+    void MetamorphicTest<T, U>::getFollowCaseInfo(int mrId, int sourceCaseId, int followCaseId) {
+        string sql = "SELECT * FROM follow_case_info WHERE test_id=" + to_string(testId) + " AND mr_id=" + to_string(mrId) +
+                     " AND source_case_id=" + to_string(sourceCaseId) + " AND follow_case_id=" + to_string(followCaseId) + ";";
+        vector<vector<unordered_map<string,string>>> result = mysql->queryData(sql);
+        followCases[mrId][sourceCaseId][followCaseId] = deserialize<T>(result[0][0]["follow_case"]);
+        followCaseResults[mrId][sourceCaseId][followCaseId] = deserialize<U>(result[0][0]["follow_case_result"]);
+    }
+
+    template<typename T, typename U>
+    void MetamorphicTest<T, U>::getMTestInfo(int mrId, int sourceCaseId, int followCaseId) {
+        string sql = "SELECT * FROM metamorphic_test_info WHERE test_id=" + to_string(testId) + " AND mr_id=" + to_string(mrId) +
+                     " AND source_case_id=" + to_string(sourceCaseId) + " AND follow_case_id=" + to_string(followCaseId) + ";";
+        vector<vector<unordered_map<string,string>>> result = mysql->queryData(sql);
+        metamorphicTestResults[mrId][sourceCaseId][followCaseId] = stoi(result[0][0]["metamorphic_test_result"]);
     }
 }
 

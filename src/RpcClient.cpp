@@ -13,7 +13,7 @@ vector<string> RpcClient::callFunction(const string &name, const string &type, v
         cmd += arg + "$";
     }
     cmd += "END$";
-    write(cmd);
+    write(cmd.data(), cmd.size());
     string result;
     while (true) {
         string temp = read();
